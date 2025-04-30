@@ -3,6 +3,9 @@ import warnings
 from typing import Any
 
 import matplotlib
+matplotlib.rcParams['font.sans-serif'] = ['STHeiti'] # Replace 'SimHei'
+matplotlib.rcParams['axes.unicode_minus'] = False        
+
 import seaborn as sns
 from pandas.plotting import (
     deregister_matplotlib_converters,
@@ -76,7 +79,7 @@ def manage_matplotlib_context() -> Any:
     try:
         register_matplotlib_converters()
         matplotlib.rcParams.update(customRcParams)
-        sns.set_style(style="white")
+        sns.set_theme(style="white", font="STHeiti")
         yield
     finally:
         deregister_matplotlib_converters()  # revert to original unit registries
