@@ -483,7 +483,7 @@ class ProfileReport(SerializeReport, ExpectationsReport):
             description_dict = encode_it(description_dict)
             description_dict = redact_summary(description_dict, self.config)
 
-            data = json.dumps(description_dict, indent=4)
+            data = json.dumps(description_dict, indent=4, ensure_ascii=False)
             pbar.update()
         return data
 
