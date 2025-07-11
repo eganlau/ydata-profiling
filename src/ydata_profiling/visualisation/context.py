@@ -1,11 +1,10 @@
 import contextlib
 import warnings
 from typing import Any
+import platform
+import os
 
 import matplotlib
-matplotlib.rcParams['font.sans-serif'] = ['STHeiti'] # Replace 'SimHei'
-matplotlib.rcParams['axes.unicode_minus'] = False        
-
 import seaborn as sns
 from pandas.plotting import (
     deregister_matplotlib_converters,
@@ -13,10 +12,70 @@ from pandas.plotting import (
 )
 
 
+def configure_matplotlib_for_cjk():
+    """
+    Configure matplotlib to properly display Chinese characters in plots.
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.font_manager as fm
+    
+    system = platform.system()
+    font_path = None
+    
+    if system == 'Darwin':  # macOS
+        potential_fonts = [
+            '/System/Library/Fonts/PingFang.ttc',
+            '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
+            '/Library/Fonts/Arial Unicode.ttf',
+            '/System/Library/Fonts/STHeiti Light.ttc',
+            '/System/Library/Fonts/Helvetica.ttc',
+            '/Library/Fonts/Microsoft/SimHei.ttf',
+            '/Library/Fonts/Microsoft/SimSun.ttf',
+        ]
+        fallback_fonts = ['PingFang SC', 'Arial Unicode MS', 'STHeiti', 'Helvetica', 'sans-serif']
+    elif system == 'Windows':
+        potential_fonts = [
+            'C:\\Windows\\Fonts\\simhei.ttf',
+            'C:\\Windows\\Fonts\\simsun.ttc',
+            'C:\\Windows\\Fonts\\msyh.ttc'
+        ]
+        fallback_fonts = ['Microsoft YaHei', 'SimHei', 'Arial', 'sans-serif']
+    elif system == 'Linux':
+        potential_fonts = [
+            '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+            '/usr/share/fonts/truetype/arphic/ukai.ttc',
+            '/usr/share/fonts/truetype/arphic/uming.ttc',
+        ]
+        fallback_fonts = ['Noto Sans CJK SC', 'WenQuanYi Micro Hei', 'DejaVu Sans', 'Liberation Sans', 'sans-serif']
+    else:
+        potential_fonts = []
+        fallback_fonts = ['DejaVu Sans', 'Liberation Sans', 'sans-serif']
+
+    # Try to find an existing font file
+    for path_option in potential_fonts:
+        if os.path.exists(path_option):
+            font_path = path_option
+            break
+            
+    try:
+        if font_path:
+            font_prop = fm.FontProperties(fname=font_path)
+            font_name = font_prop.get_name()
+            return [font_name] + fallback_fonts
+        else:
+            return fallback_fonts
+    except Exception:
+        return fallback_fonts
+
+
 @contextlib.contextmanager
 def manage_matplotlib_context() -> Any:
     """Return a context manager for temporarily changing matplotlib unit registries and rcParams."""
     originalRcParams = matplotlib.rcParams.copy()
+
+    # Get cross-platform font configuration
+    cjk_fonts = configure_matplotlib_for_cjk()
 
     # Credits for this style go to the ggplot and seaborn packages.
     #   We copied the style file to remove dependencies on the Seaborn package.
@@ -39,12 +98,7 @@ def manage_matplotlib_context() -> Any:
         "axes.axisbelow": True,
         "image.cmap": "Greys",
         "font.family": ["sans-serif"],
-        "font.sans-serif": [
-            "Arial",
-            "Liberation Sans",
-            "Bitstream Vera Sans",
-            "sans-serif",
-        ],
+        "font.sans-serif": cjk_fonts,
         "grid.linestyle": "-",
         "lines.solid_capstyle": "round",
         # Seaborn darkgrid parameters
@@ -74,12 +128,15 @@ def manage_matplotlib_context() -> Any:
         "xtick.major.pad": 7,
         "ytick.major.pad": 7,
         "backend": "agg",
+        "axes.unicode_minus": False,
     }
 
     try:
         register_matplotlib_converters()
         matplotlib.rcParams.update(customRcParams)
-        sns.set_theme(style="white", font="STHeiti")
+        # sns.set_theme(style="white", font="STHeiti")        
+        # Use the first font from our CJK font list for seaborn
+        sns.set_theme(style="white", font=cjk_fonts[0])
         yield
     finally:
         deregister_matplotlib_converters()  # revert to original unit registries
