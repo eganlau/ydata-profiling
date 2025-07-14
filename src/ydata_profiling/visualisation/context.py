@@ -20,8 +20,8 @@ def configure_matplotlib_for_cjk():
     import matplotlib.font_manager as fm
     
     system = platform.system()
-    font_path = None
     
+    # Define font search priorities by platform
     if system == 'Darwin':  # macOS
         potential_fonts = [
             '/System/Library/Fonts/PingFang.ttc',
@@ -47,26 +47,24 @@ def configure_matplotlib_for_cjk():
             '/usr/share/fonts/truetype/arphic/ukai.ttc',
             '/usr/share/fonts/truetype/arphic/uming.ttc',
         ]
-        fallback_fonts = ['Noto Sans CJK SC', 'WenQuanYi Micro Hei', 'DejaVu Sans', 'Liberation Sans', 'sans-serif']
+        fallback_fonts = ['DejaVu Sans', 'Liberation Sans', 'sans-serif']
     else:
         potential_fonts = []
         fallback_fonts = ['DejaVu Sans', 'Liberation Sans', 'sans-serif']
 
-    # Try to find an existing font file
+    # Try to find an existing font file and get its name
     for path_option in potential_fonts:
         if os.path.exists(path_option):
-            font_path = path_option
-            break
-            
-    try:
-        if font_path:
-            font_prop = fm.FontProperties(fname=font_path)
-            font_name = font_prop.get_name()
-            return [font_name] + fallback_fonts
-        else:
-            return fallback_fonts
-    except Exception:
-        return fallback_fonts
+            try:
+                font_prop = fm.FontProperties(fname=path_option)
+                font_name = font_prop.get_name()
+                if font_name and font_name != 'unknown':
+                    return [font_name] + fallback_fonts
+            except Exception:
+                continue
+    
+    # If no font files found, return fallbacks
+    return fallback_fonts
 
 
 @contextlib.contextmanager
@@ -130,6 +128,8 @@ def manage_matplotlib_context() -> Any:
         "backend": "agg",
         "axes.unicode_minus": False,
     }
+    
+
 
     try:
         register_matplotlib_converters()
@@ -145,3 +145,4 @@ def manage_matplotlib_context() -> Any:
                 "ignore", category=matplotlib.MatplotlibDeprecationWarning
             )
             matplotlib.rcParams.update(originalRcParams)  # revert to original rcParams
+            
